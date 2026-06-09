@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📋 Panini Coupe du Monde</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#FFD700;--red:#E63946;--green:#2DC653;--orange:#FF6B35;
+    --cyan:#00B4D8;--bg:#0A1628;--card-bg:#112240;--text:#E8F4FD;--muted:#8892a4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+  .spinner{width:48px;height:48px;border:4px solid rgba(255,215,0,0.2);
+    border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  header{background:linear-gradient(135deg,#0A1628,#1a2a4a,#0A1628);
+    border-bottom:3px solid var(--gold);padding:14px 16px;
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  header h1{font-family:'Bangers',cursive;font-size:1.6rem;letter-spacing:2px;
+    background:linear-gradient(135deg,var(--gold),#FFA500);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .header-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .stat-chip{background:rgba(255,215,0,0.1);border:1.5px solid var(--gold);
+    border-radius:20px;padding:4px 12px;font-size:0.78rem;font-weight:800;
+    color:var(--gold);white-space:nowrap;display:flex;align-items:center;gap:5px}
+  .sync-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .sync-dot.syncing{background:var(--gold);animation:pulse 1s infinite}
+  .sync-dot.ok{background:var(--green)}
+  .sync-dot.error{background:var(--red)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  .share-btn{background:linear-gradient(135deg,#FF6B35,#E63946);border:none;border-radius:20px;
+    padding:6px 14px;font-size:0.78rem;font-weight:800;color:white;cursor:pointer;
+    white-space:nowrap;font-family:'Nunito',sans-serif;transition:all 0.2s}
+  .share-btn:hover{transform:scale(1.05)}
+  .print-btn{background:linear-gradient(135deg,#1D3557,#2471A3);border:none;border-radius:20px;
+    padding:6px 14px;font-size:0.78rem;font-weight:800;color:white;cursor:pointer;
+    white-space:nowrap;font-family:'Nunito',sans-serif;transition:all 0.2s}
+  .print-btn:hover{transform:scale(1.05)}
+  .tabs{display:flex;background:#0d1e35;border-bottom:2px solid #1e3a5f;padding:0 16px;overflow-x:auto}
+  .tab-btn{font-family:'Bangers',cursive;font-size:1.05rem;letter-spacing:1px;
+    padding:11px 18px;border:none;background:transparent;color:var(--muted);
+    cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap}
+  .tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+  .page{display:none;padding:16px}
+  .page.active{display:block}
+  .filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;margin-top:14px}
+  .search-bar{flex:1;min-width:160px;background:var(--card-bg);border:2px solid rgba(255,255,255,0.1);
+    border-radius:10px;padding:10px 14px;color:var(--text);
+    font-family:'Nunito',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.2s}
+  .search-bar:focus{border-color:var(--gold)}
+  .filter-chip{border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:var(--muted);
+    border-radius:20px;padding:5px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.2s}
+  .filter-chip.active,.filter-chip:hover{background:var(--gold);border-color:var(--gold);color:#000}
+  .reset-btn{background:rgba(230,57,70,0.15);border:1.5px solid var(--red);color:var(--red);
+    border-radius:8px;padding:7px 14px;font-family:'Nunito',sans-serif;
+    font-weight:800;font-size:0.8rem;cursor:pointer}
+  .reset-btn:hover{background:rgba(230,57,70,0.3)}
+  .group-card{background:var(--card-bg);border-radius:14px;margin-bottom:14px;
+    overflow:hidden;border:1.5px solid rgba(255,255,255,0.08);transition:border-color 0.2s}
+  .group-card:hover{border-color:rgba(255,255,255,0.2)}
+  .group-header{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 16px;cursor:pointer;user-select:none}
+  .group-label{font-family:'Bangers',cursive;font-size:1.25rem;letter-spacing:1.5px}
+  .group-progress{font-size:0.78rem;font-weight:800;color:var(--muted)}
+  .group-progress .count{color:var(--green);font-size:1rem}
+  .group-body{padding:4px 16px 14px}
+  .team-row{margin-bottom:12px}
+  .team-name{font-weight:900;font-size:0.85rem;letter-spacing:1px;margin-bottom:6px;
+    display:flex;align-items:center;gap:8px}
+  .team-progress-bar{height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:4px;overflow:hidden}
+  .team-progress-fill{height:100%;border-radius:2px;transition:width 0.3s;background:linear-gradient(90deg,var(--green),var(--cyan))}
+  .sticker-grid{display:flex;flex-wrap:wrap;gap:6px}
+  .sticker{display:flex;align-items:center;justify-content:center;
+    width:38px;height:38px;border-radius:8px;
+    border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);
+    font-size:0.72rem;font-weight:900;cursor:pointer;transition:all 0.15s;
+    position:relative;user-select:none;-webkit-tap-highlight-color:transparent}
+  .sticker:hover{transform:scale(1.1);border-color:rgba(255,255,255,0.4)}
+  .sticker.checked{background:linear-gradient(135deg,#2DC653,#00B4D8);border-color:transparent;color:white}
+  .sticker.checked::after{content:'✓';position:absolute;top:-1px;right:-1px;font-size:0.6rem;
+    background:var(--green);border-radius:50%;width:13px;height:13px;
+    display:flex;align-items:center;justify-content:center;line-height:1}
+  .special-section{background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,165,0,0.05));
+    border:2px solid rgba(255,215,0,0.3);border-radius:14px;padding:16px;margin-bottom:22px}
+  .special-section .sticker{border-color:rgba(255,215,0,0.4);color:var(--gold);font-size:0.6rem}
+  .special-section .sticker.checked{background:linear-gradient(135deg,#b8860b,var(--gold));color:white;border-color:transparent}
+  .grp-a .group-label{color:#FF6B6B}.grp-a .group-header{border-left:4px solid #FF6B6B}
+  .grp-b .group-label{color:#FFA500}.grp-b .group-header{border-left:4px solid #FFA500}
+  .grp-c .group-label{color:#FFD700}.grp-c .group-header{border-left:4px solid #FFD700}
+  .grp-d .group-label{color:#7CFC00}.grp-d .group-header{border-left:4px solid #7CFC00}
+  .grp-e .group-label{color:#00CED1}.grp-e .group-header{border-left:4px solid #00CED1}
+  .grp-f .group-label{color:#1E90FF}.grp-f .group-header{border-left:4px solid #1E90FF}
+  .grp-g .group-label{color:#9370DB}.grp-g .group-header{border-left:4px solid #9370DB}
+  .grp-h .group-label{color:#FF69B4}.grp-h .group-header{border-left:4px solid #FF69B4}
+  .grp-i .group-label{color:#FF4500}.grp-i .group-header{border-left:4px solid #FF4500}
+  .grp-j .group-label{color:#32CD32}.grp-j .group-header{border-left:4px solid #32CD32}
+  .grp-k .group-label{color:#00BFFF}.grp-k .group-header{border-left:4px solid #00BFFF}
+  .grp-l .group-label{color:#FF8C00}.grp-l .group-header{border-left:4px solid #FF8C00}
+  .grp-fwc .group-label{color:var(--gold)}.grp-fwc .group-header{border-left:4px solid var(--gold);background:rgba(255,215,0,0.05)}
+  .section-title{font-family:'Bangers',cursive;font-size:1.3rem;letter-spacing:2px;
+    margin:18px 0 10px;padding:7px 14px;border-radius:8px;display:flex;align-items:center;gap:10px}
+  .collapse-icon{font-size:0.9rem;color:var(--muted);transition:transform 0.2s}
+  .group-card.collapsed .collapse-icon{transform:rotate(-90deg)}
+  .group-card.collapsed .group-body{display:none}
+  .global-progress{background:var(--card-bg);border-radius:14px;padding:18px;margin-bottom:18px;
+    border:1.5px solid rgba(255,215,0,0.2)}
+  .gp-title{font-family:'Bangers',cursive;font-size:1.2rem;color:var(--gold);letter-spacing:1px;margin-bottom:10px}
+  .gp-bar-wrap{background:rgba(255,255,255,0.06);border-radius:8px;height:18px;overflow:hidden;margin-bottom:8px}
+  .gp-bar{height:100%;border-radius:8px;background:linear-gradient(90deg,#FF6B35,#FFD700,#2DC653);
+    transition:width 0.4s;display:flex;align-items:center;justify-content:flex-end;
+    padding-right:6px;font-size:0.65rem;font-weight:900;color:#000;min-width:30px}
+  .gp-numbers{display:flex;justify-content:space-between;font-size:0.82rem;color:var(--muted)}
+  .gp-numbers strong{color:var(--text)}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+  .summary-card{background:var(--card-bg);border-radius:12px;padding:12px;
+    border:1.5px solid rgba(255,255,255,0.08);text-align:center;cursor:pointer;transition:all 0.2s}
+  .summary-card:hover{border-color:var(--gold);transform:translateY(-2px)}
+  .sc-flag{font-size:1.6rem;display:block;margin-bottom:4px}
+  .sc-team{font-weight:900;font-size:0.82rem;letter-spacing:1px;margin-bottom:4px}
+  .sc-bar{background:rgba(255,255,255,0.06);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px}
+  .sc-fill{height:100%;border-radius:4px;transition:width 0.3s}
+  .sc-fill.low{background:var(--red)}.sc-fill.mid{background:var(--orange)}.sc-fill.high{background:var(--green)}
+  .sc-pct{font-size:0.7rem;font-weight:800;color:var(--muted)}
+  /* SHARE MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;
+    display:none;align-items:flex-end;justify-content:center}
+  .modal-overlay.open{display:flex}
+  .modal-box{background:#112240;border-radius:20px 20px 0 0;padding:22px;width:100%;
+    max-width:560px;border:1.5px solid rgba(255,255,255,0.1);max-height:85vh;overflow-y:auto}
+  .modal-title{font-family:'Bangers',cursive;font-size:1.4rem;letter-spacing:1px}
+  .modal-close{background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;
+    padding:6px 12px;cursor:pointer;font-size:1rem}
+  .share-box{background:rgba(0,0,0,0.3);border-radius:10px;padding:14px;margin:12px 0;
+    font-size:0.72rem;color:#ccc;line-height:2;word-break:break-word;
+    max-height:220px;overflow-y:auto;white-space:pre-wrap;font-family:monospace}
+  .copy-btn-big{width:100%;background:linear-gradient(135deg,#FF6B35,#FFD700);border:none;
+    color:#000;border-radius:12px;padding:14px;font-weight:900;font-size:1rem;
+    cursor:pointer;font-family:'Nunito',sans-serif}
+  @media(max-width:480px){header h1{font-size:1.3rem}.sticker{width:34px;height:34px;font-size:0.65rem}}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div style="font-family:'Bangers',cursive;font-size:2rem;color:var(--gold);letter-spacing:2px;">⚽ Panini WC</div>
+  <div class="spinner"></div>
+  <div style="color:var(--muted);font-size:0.85rem;">Chargement…</div>
+</div>
+
+<header>
+  <h1>⚽ Panini WC</h1>
+  <div class="header-right">
+    <div class="stat-chip">
+      <span class="sync-dot ok" id="sync-dot"></span>
+      <span id="stat-checked">0 cochées</span>
+    </div>
+    <div class="stat-chip" id="stat-pct">📊 0%</div>
+    <button class="share-btn" onclick="openShareModal()">📤 Manquantes</button>
+    <button class="print-btn" onclick="printMissing()">🖨️ PDF</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('page1',this)">📋 Liste</button>
+  <button class="tab-btn" onclick="switchTab('page2',this)">📊 Résumé</button>
+</div>
+
+<div class="page active" id="page1">
+  <div class="filter-row">
+    <input class="search-bar" id="searchInput" placeholder="🔍 Rechercher une équipe…" oninput="filterGroups()">
+    <button class="filter-chip active" id="filter-all" onclick="setFilter('all',this)">Tout</button>
+    <button class="filter-chip" id="filter-todo" onclick="setFilter('todo',this)">Manquantes</button>
+    <button class="filter-chip" id="filter-done" onclick="setFilter('done',this)">Cochées</button>
+    <button class="reset-btn" onclick="resetAll()">🔄 Reset</button>
+  </div>
+  <div class="section-title" style="background:rgba(255,215,0,0.08);color:var(--gold);">⭐ Cartes Spéciales</div>
+  <div class="special-section group-card" id="grp-special">
+    <div class="group-header" onclick="toggleGroup(this.parentElement)">
+      <span class="group-label" style="color:var(--gold);">SPÉCIALES</span>
+      <span class="group-progress"><span class="count" id="prog-special">0</span> / 2</span>
+      <span class="collapse-icon">▾</span>
+    </div>
+    <div class="group-body"><div class="sticker-grid" id="grid-special"></div></div>
+  </div>
+  <div class="section-title" style="background:rgba(29,53,87,0.5);color:var(--cyan);">🌍 Groupes A → L</div>
+  <div id="groups-container"></div>
+</div>
+
+<div class="page" id="page2">
+  <div class="global-progress" style="margin-top:14px;">
+    <div class="gp-title">🏆 Progression Globale</div>
+    <div class="gp-bar-wrap"><div class="gp-bar" id="gp-bar" style="width:0%">0%</div></div>
+    <div class="gp-numbers">
+      <span><strong id="gp-checked">0</strong> cochées</span>
+      <span><strong id="gp-total">0</strong> total</span>
+    </div>
+  </div>
+  <div class="section-title" style="background:rgba(29,53,87,0.5);color:var(--cyan);">📊 Toutes les équipes</div>
+  <div class="summary-grid" id="summary-grid"></div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay" id="share-modal">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span class="modal-title" style="color:var(--red);">📤 Mes cartes manquantes</span>
+      <button class="modal-close" onclick="closeShareModal()">✕</button>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;">Copie et envoie dans WhatsApp, SMS ou email :</p>
+    <div class="share-box" id="share-text"></div>
+    <button class="copy-btn-big" id="copy-btn" onclick="copyShare()">📋 Copier la liste</button>
+    <p style="color:var(--muted);font-size:0.72rem;margin-top:10px;text-align:center;">Colle ensuite dans WhatsApp, SMS ou email 📱</p>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:"AIzaSyDwdzsJumBysZOX9CBvBxMw8trOHrnJyEI",
+  authDomain:"panini-wc.firebaseapp.com",
+  projectId:"panini-wc",
+  storageBucket:"panini-wc.firebasestorage.app",
+  messagingSenderId:"643302865641",
+  appId:"1:643302865641:web:5e989c6a29285734730e78"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const DOC_REF = doc(db,'shared','album');
+
+// ── DATA — liste exacte des cartes manquantes ──────────────────────────────
+const DATA = {
+  special:{flag:"⭐",stickers:["FWC-1","FWC-4"]},
+  groups:[
+    {id:"A",color:"#FF6B6B",teams:[
+      {code:"MEX",flag:"🇲🇽",stickers:[1,4,5,7,18,19]},
+      {code:"RSA",flag:"🇿🇦",stickers:[13]},
+      {code:"KOR",flag:"🇰🇷",stickers:[15,18,19]},
+      {code:"CZE",flag:"🇨🇿",stickers:[4,5,6,10,13,14,17,20]}]},
+    {id:"B",color:"#FFA500",teams:[
+      {code:"CAN",flag:"🇨🇦",stickers:[1]},
+      {code:"BIH",flag:"🇧🇦",stickers:[17,19]},
+      {code:"QAT",flag:"🇶🇦",stickers:[3,4,7,8,18,20]},
+      {code:"SUI",flag:"🇨🇭",stickers:[4,6,7,9,10,18,19]}]},
+    {id:"C",color:"#FFD700",teams:[
+      {code:"BRA",flag:"🇧🇷",stickers:[6,14,17]},
+      {code:"MAR",flag:"🇲🇦",stickers:[11,14,16]},
+      {code:"HAI",flag:"🇭🇹",stickers:[4,5,9,13,15,16]},
+      {code:"SCO",flag:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",stickers:[5,6,7,8,10,12,14,16]}]},
+    {id:"D",color:"#7CFC00",teams:[
+      {code:"USA",flag:"🇺🇸",stickers:[10,15,19]},
+      {code:"PAR",flag:"🇵🇾",stickers:[1,3,6,7,8,20]},
+      {code:"AUS",flag:"🇦🇺",stickers:[17,19]},
+      {code:"TUR",flag:"🇹🇷",stickers:[13,16]}]},
+    {id:"E",color:"#00CED1",teams:[
+      {code:"GER",flag:"🇩🇪",stickers:[1,4,7,10,12,14,18,20]},
+      {code:"CUW",flag:"🇨🇼",stickers:[3,5,6,15,18]},
+      {code:"CIV",flag:"🇨🇮",stickers:[8,20]},
+      {code:"ECU",flag:"🇪🇨",stickers:[2,5,6,9,16]}]},
+    {id:"F",color:"#1E90FF",teams:[
+      {code:"NED",flag:"🇳🇱",stickers:[2,5,10,18]},
+      {code:"JPN",flag:"🇯🇵",stickers:[2,7,10,15,16]},
+      {code:"SWE",flag:"🇸🇪",stickers:[2,3,4,6,13,16,19]},
+      {code:"TUN",flag:"🇹🇳",stickers:[10,14]}]},
+    {id:"G",color:"#9370DB",teams:[
+      {code:"BEL",flag:"🇧🇪",stickers:[1,4,9,11,12,15,18]},
+      {code:"EGY",flag:"🇪🇬",stickers:[4,11,13,15,16,18,19]},
+      {code:"IRN",flag:"🇮🇷",stickers:[5,9,11,12,13]},
+      {code:"NZL",flag:"🇳🇿",stickers:[1,11,12,15,20]}]},
+    {id:"H",color:"#FF69B4",teams:[
+      {code:"ESP",flag:"🇪🇸",stickers:[1,5,12,13,16]},
+      {code:"CPV",flag:"🇨🇻",stickers:[4,7,13]},
+      {code:"KSA",flag:"🇸🇦",stickers:[8,17,18,20]},
+      {code:"URU",flag:"🇺🇾",stickers:[2,5,14,17,18,19]}]},
+    {id:"I",color:"#FF4500",teams:[
+      {code:"FRA",flag:"🇫🇷",stickers:[1,4,8,10,11]},
+      {code:"SEN",flag:"🇸🇳",stickers:[1,4,5,6,13,16,17]},
+      {code:"IRQ",flag:"🇮🇶",stickers:[2,7,8,14]},
+      {code:"NOR",flag:"🇳🇴",stickers:[6,7,8,9,12,14,15]}]},
+    {id:"J",color:"#32CD32",teams:[
+      {code:"ARG",flag:"🇦🇷",stickers:[3,5,13,16,18,19,20]},
+      {code:"ALG",flag:"🇩🇿",stickers:[3,4,5,6,7,12,15]},
+      {code:"AUT",flag:"🇦🇹",stickers:[2,4,7,10,18]},
+      {code:"JOR",flag:"🇯🇴",stickers:[2,4,5,8,14]}]},
+    {id:"K",color:"#00BFFF",teams:[
+      {code:"POR",flag:"🇵🇹",stickers:[4,8,15]},
+      {code:"COD",flag:"🇨🇩",stickers:[3,5,6,7,11,12,14,15,19]},
+      {code:"UZB",flag:"🇺🇿",stickers:[17,19]},
+      {code:"COL",flag:"🇨🇴",stickers:[2,3,4,8,11,13,18]}]},
+    {id:"L",color:"#FF8C00",teams:[
+      {code:"ENG",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",stickers:[1,3,5,12,13,14,18]},
+      {code:"CRO",flag:"🇭🇷",stickers:[1,13,14,18]},
+      {code:"GHA",flag:"🇬🇭",stickers:[4,8,9,12,20]},
+      {code:"PAN",flag:"🇵🇦",stickers:[1,5,8,10,11,12,14,16,18]}]},
+    {id:"FWC",color:"#FFD700",teams:[
+      {code:"FWC",flag:"🏆",stickers:["FWC-9","FWC-14","FWC-16","FWC-17"]}]}
+  ]
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let checked={}, saveTimer=null, initDone=false;
+function k(code,s){return `${code}__${s}`;}
+function setSyncDot(s){document.getElementById('sync-dot').className='sync-dot '+s;}
+
+onSnapshot(DOC_REF,(snap)=>{
+  if(!initDone||!snap.exists()) return;
+  const remote=snap.data().checked||{};
+  if(JSON.stringify(remote)===JSON.stringify(checked)) return;
+  checked=remote;
+  document.querySelectorAll('.sticker[data-key]').forEach(el=>{
+    el.classList.toggle('checked',!!checked[el.dataset.key]);
+  });
+  updateAllProgress();
+  updateStats();
+  setSyncDot('ok');
+});
+
+async function saveToFirebase(){
+  setSyncDot('syncing');
+  try{await setDoc(DOC_REF,{checked,updatedAt:Date.now()});setSyncDot('ok');}
+  catch(e){console.error(e);setSyncDot('error');}
+}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveToFirebase,1500);}
+
+async function init(){
+  setSyncDot('syncing');
+  try{
+    const snap=await getDoc(DOC_REF);
+    checked=snap.exists()?(snap.data().checked||{}):{};
+    setSyncDot('ok');
+  }catch(e){console.error(e);setSyncDot('error');checked={};}
+  renderSpecial();renderGroups();updateStats();
+  initDone=true;
+  document.getElementById('loading-screen').style.display='none';
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderSpecial(){
+  const grid=document.getElementById('grid-special');
+  grid.innerHTML='';
+  DATA.special.stickers.forEach(s=>{
+    const key=k('SPECIAL',s);
+    const el=document.createElement('div');
+    el.className='sticker'+(checked[key]?' checked':'');
+    el.textContent=s; el.dataset.key=key;
+    el.style.fontSize=String(s).length>4?'0.5rem':'0.65rem';
+    el.onclick=()=>toggle('SPECIAL',s,el,'prog-special',DATA.special.stickers.length,null,null);
+    grid.appendChild(el);
+  });
+  updateGroupProgress('SPECIAL','prog-special',DATA.special.stickers);
+}
+
+function renderGroups(){
+  const container=document.getElementById('groups-container');
+  container.innerHTML='';
+  DATA.groups.forEach(g=>{
+    const card=document.createElement('div');
+    card.className=`group-card grp-${g.id.toLowerCase()}`;
+    card.id=`card-grp-${g.id}`;
+    const total=g.teams.flatMap(t=>t.stickers).length;
+    const progId=`prog-grp-${g.id}`;
+    let teamsHTML='';
+    g.teams.forEach(t=>{
+      const tTotal=t.stickers.length;
+      const tProgId=`tprog-${t.code}`;
+      const tBarId=`tbar-${t.code}`;
+      let stHTML='';
+      t.stickers.forEach(s=>{
+        const key=k(t.code,s);
+        const isC=checked[key]?' checked':'';
+        const fs=String(s).length>4?'0.48rem':'0.7rem';
+        stHTML+=`<div class="sticker${isC}" data-key="${key}" style="font-size:${fs}"
+          onclick="toggle('${t.code}','${s}',this,'${tProgId}',${tTotal},'${tBarId}','${progId}')"
+          title="${t.code}-${s}">${s}</div>`;
+      });
+      teamsHTML+=`<div class="team-row" data-team="${t.code}">
+        <div class="team-name"><span>${t.flag}</span><span>${t.code}</span>
+          <span style="margin-left:auto;font-size:0.72rem;color:var(--muted)" id="${tProgId}">0/${tTotal}</span>
+        </div>
+        <div class="sticker-grid">${stHTML}</div>
+        <div class="team-progress-bar"><div class="team-progress-fill" id="${tBarId}" style="width:0%"></div></div>
+      </div>`;
+    });
+    card.innerHTML=`
+      <div class="group-header" onclick="toggleGroup(this.parentElement)">
+        <span class="group-label">${g.id==='FWC'?'🏆 FWC':`GROUPE ${g.id}`}</span>
+        <span class="group-progress"><span class="count" id="${progId}">0</span> / ${total}</span>
+        <span class="collapse-icon">▾</span>
+      </div>
+      <div class="group-body">${teamsHTML}</div>`;
+    container.appendChild(card);
+    g.teams.forEach(t=>updateTeamProgress(t.code,t.stickers,`tprog-${t.code}`,`tbar-${t.code}`));
+    updateGroupTotalProgress(g,progId);
+  });
+}
+
+// ── Toggle ─────────────────────────────────────────────────────────────────
+window.toggle=function(code,s,el,tProgId,tTotal,tBarId,grpProgId){
+  const key=k(code,s);
+  checked[key]=!checked[key];
+  el.classList.toggle('checked',checked[key]);
+  if(tBarId) updateTeamProgress(code,findTeamStickers(code),tProgId,tBarId);
+  if(grpProgId) updateGroupProgressById(grpProgId);
+  updateGroupProgress(code,tProgId,findTeamStickers(code));
+  updateStats(); scheduleSave(); updateSummaryCard(code);
+};
+
+function findTeamStickers(code){
+  if(code==='SPECIAL') return DATA.special.stickers;
+  for(const g of DATA.groups){const t=g.teams.find(t=>t.code===code);if(t) return t.stickers;}
+  return [];
+}
+function updateGroupProgress(code,progId,stickers){
+  const cnt=stickers.filter(s=>checked[k(code,s)]).length;
+  const el=document.getElementById(progId);if(el) el.textContent=cnt;
+}
+function updateTeamProgress(code,stickers,tProgId,tBarId){
+  const cnt=stickers.filter(s=>checked[k(code,s)]).length;
+  const pct=stickers.length?Math.round(cnt/stickers.length*100):0;
+  const tp=document.getElementById(tProgId);const tb=document.getElementById(tBarId);
+  if(tp) tp.textContent=`${cnt}/${stickers.length}`;
+  if(tb) tb.style.width=pct+'%';
+}
+function updateGroupProgressById(progId){
+  const gId=progId.replace('prog-grp-','');
+  const g=DATA.groups.find(g=>g.id===gId);if(!g) return;
+  let c=0;g.teams.forEach(t=>t.stickers.forEach(s=>{if(checked[k(t.code,s)]) c++;}));
+  const el=document.getElementById(progId);if(el) el.textContent=c;
+}
+function updateGroupTotalProgress(g,progId){
+  let c=0;g.teams.forEach(t=>t.stickers.forEach(s=>{if(checked[k(t.code,s)]) c++;}));
+  const el=document.getElementById(progId);if(el) el.textContent=c;
+}
+function updateAllProgress(){
+  updateGroupProgress('SPECIAL','prog-special',DATA.special.stickers);
+  DATA.groups.forEach(g=>{
+    g.teams.forEach(t=>updateTeamProgress(t.code,t.stickers,`tprog-${t.code}`,`tbar-${t.code}`));
+    updateGroupTotalProgress(g,`prog-grp-${g.id}`);
+  });
+}
+
+function updateStats(){
+  let totalChecked=0,totalAll=0;
+  totalAll+=DATA.special.stickers.length;
+  DATA.special.stickers.forEach(s=>{if(checked[k('SPECIAL',s)]) totalChecked++;});
+  DATA.groups.forEach(g=>g.teams.forEach(t=>{
+    totalAll+=t.stickers.length;
+    t.stickers.forEach(s=>{if(checked[k(t.code,s)]) totalChecked++;});
+  }));
+  const pct=totalAll?Math.round(totalChecked/totalAll*100):0;
+  document.getElementById('stat-checked').textContent=`${totalChecked} cochées`;
+  document.getElementById('stat-pct').textContent=`📊 ${pct}%`;
+  document.getElementById('gp-checked').textContent=totalChecked;
+  document.getElementById('gp-total').textContent=totalAll;
+  const bar=document.getElementById('gp-bar');
+  bar.style.width=pct+'%';bar.textContent=pct+'%';
+}
+
+// ── Summary ────────────────────────────────────────────────────────────────
+window.switchTab=function(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='page2') renderSummary();
+};
+function renderSummary(){
+  const grid=document.getElementById('summary-grid');grid.innerHTML='';
+  grid.appendChild(makeSummaryCard('SPECIAL','⭐','Spéciales',DATA.special.stickers));
+  DATA.groups.forEach(g=>g.teams.forEach(t=>grid.appendChild(makeSummaryCard(t.code,t.flag,t.code,t.stickers))));
+}
+function makeSummaryCard(code,flag,label,stickers){
+  const cnt=stickers.filter(s=>checked[k(code,s)]).length;
+  const pct=stickers.length?Math.round(cnt/stickers.length*100):0;
+  const fc=pct<33?'low':pct<66?'mid':'high';
+  const card=document.createElement('div');
+  card.className='summary-card';card.id=`sumcard-${code}`;
+  card.innerHTML=`<span class="sc-flag">${flag}</span><div class="sc-team">${label}</div>
+    <div class="sc-bar"><div class="sc-fill ${fc}" style="width:${pct}%" id="scf-${code}"></div></div>
+    <div class="sc-pct" id="scp-${code}">${cnt}/${stickers.length} — ${pct}%</div>`;
+  return card;
+}
+function updateSummaryCard(code){
+  const stickers=findTeamStickers(code);
+  const cnt=stickers.filter(s=>checked[k(code,s)]).length;
+  const pct=stickers.length?Math.round(cnt/stickers.length*100):0;
+  const fc=pct<33?'low':pct<66?'mid':'high';
+  const fill=document.getElementById(`scf-${code}`);
+  const txt=document.getElementById(`scp-${code}`);
+  if(fill){fill.className=`sc-fill ${fc}`;fill.style.width=pct+'%';}
+  if(txt) txt.textContent=`${cnt}/${stickers.length} — ${pct}%`;
+}
+
+// ── Controls ───────────────────────────────────────────────────────────────
+window.toggleGroup=c=>c.classList.toggle('collapsed');
+window.filterGroups=function(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.group-card').forEach(c=>{
+    c.style.display=(!q||c.textContent.toLowerCase().includes(q))?'':'none';
+  });
+};
+window.setFilter=function(mode,btn){
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.sticker').forEach(el=>{
+    const isC=el.classList.contains('checked');
+    el.style.display=mode==='all'?'':mode==='todo'?(isC?'none':''):(isC?'':'none');
+  });
+};
+window.resetAll=function(){
+  if(!confirm('Remettre à zéro toutes les cases cochées ?')) return;
+  checked={};saveToFirebase();renderSpecial();renderGroups();updateStats();
+};
+
+// ── Share WhatsApp ─────────────────────────────────────────────────────────
+window.openShareModal=function(){
+  const allTeams=[
+    {code:'SPECIAL',flag:'⭐',label:'Spéciales',stickers:DATA.special.stickers},
+    ...DATA.groups.flatMap(g=>g.teams.map(t=>({...t,label:t.code,groupId:g.id}))),
+  ];
+  const lines=['🔴 MES CARTES MANQUANTES — Panini Coupe du Monde\n'];
+  allTeams.forEach(team=>{
+    const missing=team.stickers.filter(s=>!checked[k(team.code,s)]);
+    if(!missing.length) return;
+    lines.push(`${team.flag} ${team.label} : ${missing.join(', ')}`);
+  });
+  if(lines.length<=1){alert('🎉 Bravo ! Tu as toutes les cartes cochées !');return;}
+  document.getElementById('share-text').textContent=lines.join('\n').trim();
+  document.getElementById('copy-btn').textContent='📋 Copier la liste';
+  document.getElementById('share-modal').classList.add('open');
+};
+window.closeShareModal=()=>document.getElementById('share-modal').classList.remove('open');
+window.copyShare=function(){
+  navigator.clipboard.writeText(document.getElementById('share-text').textContent).then(()=>{
+    const btn=document.getElementById('copy-btn');
+    btn.textContent='✅ Copié ! Colle dans WhatsApp';
+    setTimeout(()=>{btn.textContent='📋 Copier la liste';},3000);
+  });
+};
+document.getElementById('share-modal').addEventListener('click',function(e){if(e.target===this)closeShareModal();});
+
+// ── Print PDF ──────────────────────────────────────────────────────────────
+window.printMissing=function(){
+  const allTeams=[
+    {code:'SPECIAL',flag:'⭐',label:'Spéciales',stickers:DATA.special.stickers},
+    ...DATA.groups.flatMap(g=>g.teams.map(t=>({...t,label:t.code,groupColor:g.color}))),
+  ];
+  const date=new Date().toLocaleDateString('fr-FR');
+  let totalMissing=0,sectionsHTML='';
+  allTeams.forEach(team=>{
+    const missing=team.stickers.filter(s=>!checked[k(team.code,s)]);
+    if(!missing.length) return;
+    totalMissing+=missing.length;
+    const color=team.groupColor||'#B8860B';
+    sectionsHTML+=`<div style="margin-bottom:14px;break-inside:avoid;">
+      <div style="background:${color};color:white;padding:5px 12px;border-radius:8px 8px 0 0;
+        font-family:Bangers,cursive;font-size:1rem;letter-spacing:1px;display:flex;align-items:center;gap:8px;">
+        <span>${team.flag}</span><span>${team.label}</span>
+        <span style="margin-left:auto;font-family:Nunito,sans-serif;font-size:0.75rem;font-weight:800;
+          background:rgba(0,0,0,0.2);padding:2px 8px;border-radius:10px;">
+          ${missing.length} manquante${missing.length>1?'s':''}</span>
+      </div>
+      <div style="border:2px solid ${color};border-top:none;border-radius:0 0 8px 8px;
+        padding:8px;display:flex;flex-wrap:wrap;background:#fafafa;">
+        ${missing.map(s=>`<span style="display:inline-flex;align-items:center;justify-content:center;
+          width:42px;height:42px;border-radius:8px;border:2px solid ${color};background:${color}22;
+          font-size:${String(s).length>4?'0.55rem':'0.75rem'};font-weight:900;color:${color};margin:3px;">${s}</span>`).join('')}
+      </div>
+    </div>`;
+  });
+  if(!totalMissing){alert('🎉 Bravo ! Toutes les cartes sont cochées !');return;}
+  const win=window.open('','_blank','width=800,height=900');
+  win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+    <title>Cartes manquantes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Nunito,sans-serif;padding:24px}
+    @media print{.no-print{display:none}@page{margin:1cm}}</style></head><body>
+    <div class="no-print" style="margin-bottom:20px;display:flex;gap:12px;">
+      <button onclick="window.print()" style="background:linear-gradient(135deg,#1A3A5C,#2471A3);color:white;border:none;
+        border-radius:10px;padding:12px 24px;font-family:Nunito,sans-serif;font-weight:800;font-size:1rem;cursor:pointer;">
+        🖨️ Imprimer / PDF</button>
+      <button onclick="window.close()" style="background:#eee;color:#333;border:none;border-radius:10px;
+        padding:12px 20px;font-family:Nunito,sans-serif;font-weight:700;cursor:pointer;">✕ Fermer</button>
+    </div>
+    <div style="background:linear-gradient(135deg,#1A3A5C,#0A1628);color:white;border-radius:14px;
+      padding:20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-family:Bangers,cursive;font-size:1.8rem;letter-spacing:2px;color:#FFD700;">
+          ⚽ Panini — Coupe du Monde</div>
+        <div style="font-size:0.9rem;color:#ADD8E6;margin-top:4px;">Cartes manquantes — ${date}</div>
+      </div>
+      <div style="background:rgba(255,215,0,0.15);border:2px solid #FFD700;border-radius:12px;
+        padding:10px 20px;text-align:center;">
+        <div style="font-family:Bangers,cursive;font-size:2rem;color:#FFD700;line-height:1;">${totalMissing}</div>
+        <div style="font-size:0.75rem;color:#FFD700;font-weight:800;">MANQUANTES</div>
+      </div>
+    </div>
+    ${sectionsHTML}
+    <div style="text-align:center;margin-top:20px;color:#999;font-size:0.78rem;font-style:italic;">
+      Généré depuis Panini WC Tracker • Bon échange ! 🤝</div>
+    </body></html>`);
+  win.document.close();
+};
+
+init();
+</script>
+</body>
+</html>
